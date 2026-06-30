@@ -1,6 +1,6 @@
 
--> serching for admin esculation by info from robots.txt
-		-> serching by changing URL directly: /administrator-panel or /admin-panel or /administrator
+- serching for admin esculation by info from robots.txt
+- serching by changing URL directly: /administrator-panel or /admin-panel or /administrator
 		
 		Response:
 		HTTP/2 200 OK
