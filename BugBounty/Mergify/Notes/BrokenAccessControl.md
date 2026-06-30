@@ -5,7 +5,9 @@
 
 Response:
 		HTTP/2 200 OK
+		<html>
 		 <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>
+</html>
