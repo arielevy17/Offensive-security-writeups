@@ -11,3 +11,5 @@ Response:
     <div id="root"></div>
   </body>
 </html>
+
+-> Means is a security check in the server side.
